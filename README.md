@@ -45,11 +45,11 @@ sha256sum -c SHA256SUMS
 2. 在页面底部的 Artifacts 里下载 `ghx-linux-amd64`、`ghx-linux-arm64` 或 `ghx-windows-amd64.exe`。
 
 ```bash
-# RUN_ID 是 Actions 运行页面 URL 里的数字
+# RUN_ID 是 Actions 运行页面 URL 里的数字。gh 会把 zip 解开。
 gh run download RUN_ID --repo tiamed/ghx --name ghx-linux-amd64
 ```
 
-`ci` 的每个 artifact 就是未压缩的二进制，从页面下载后可以直接用。GitHub Release 上的文件同样是未压缩的二进制。标签构建另外打一个名为 `ghx-<tag>` 的 zip artifact，里面是四个文件，运行记录在 [release 工作流](https://github.com/tiamed/ghx/actions/workflows/release.yml)。
+从 Actions 页面下载的 artifact 是 zip，里面才是二进制。GitHub Release 上的文件是未压缩的二进制。标签构建的四个文件打在一个名为 `ghx-<tag>` 的 zip artifact 里，运行记录在 [release 工作流](https://github.com/tiamed/ghx/actions/workflows/release.yml)。
 
 Linux 放到 PATH（下载的文件先 `chmod +x`）：
 
@@ -334,11 +334,11 @@ Replace `<tag>` with the release you want, for example `v0.1.0`. On Windows, `Ge
 2. Download `ghx-linux-amd64`, `ghx-linux-arm64`, or `ghx-windows-amd64.exe` from Artifacts at the bottom of the run page.
 
 ```bash
-# RUN_ID is the number in the Actions run URL
+# RUN_ID is the number in the Actions run URL. gh extracts the zip.
 gh run download RUN_ID --repo tiamed/ghx --name ghx-linux-amd64
 ```
 
-Each `ci` artifact is the uncompressed binary, so a download from the run page is ready to use. Files on a GitHub Release are uncompressed binaries too. A tag build also packs all four files into one zip artifact named `ghx-<tag>`. Those runs are listed on the [release workflow](https://github.com/tiamed/ghx/actions/workflows/release.yml).
+An artifact downloaded from the Actions page is a zip that contains the binary. Files on a GitHub Release are the uncompressed binaries. A tag build packs all four files into one zip artifact named `ghx-<tag>`. Those runs are listed on the [release workflow](https://github.com/tiamed/ghx/actions/workflows/release.yml).
 
 Linux (`chmod +x` the downloaded file first):
 

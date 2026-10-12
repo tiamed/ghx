@@ -64,7 +64,7 @@ jobs:
           test -s "dist/${{ matrix.out }}"
       - uses: actions/upload-artifact@v7
         with:
+          name: ${{ matrix.out }}
           path: dist/${{ matrix.out }}
           if-no-files-found: error
           retention-days: 90
-          archive: false
