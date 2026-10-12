@@ -397,14 +397,6 @@ After "ghx update", click Reload on the %s card. The folder path stays the same.
 Branded Chrome (Windows and Linux) ignores --load-extension since Chrome 137
 and will not install a local CRX from the Windows registry. Do not copy this
 folder into the profile Extensions directory; Chrome ignores files dropped there.
-
-在 Chrome 中加载这个未打包扩展（只需一次）：
-
-  1. 打开 chrome://extensions
-  2. 打开「开发者模式」
-  3. 点击「加载已解压的扩展程序」，选择上面的目录
-
-以后执行 ghx update 后，在扩展卡片上点「重新加载」。目录不会变。
 `, name, unpacked, name)
 	return os.WriteFile(path, []byte(body), 0o644)
 }
