@@ -60,9 +60,22 @@ func TestTrackListRemove(t *testing.T) {
 		t.Fatal(out.String())
 	}
 	out.Reset()
+	err.Reset()
+	// Pretend a prior install finished so a second add still needs --force.
+	if err := os.MkdirAll(data, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	statePath := filepath.Join(data, "state.json")
+	if err := os.WriteFile(statePath, []byte(`{"extensions":{"collectab":{"repo":"tiamed/collectab","tag":"v1","asset":"x.zip","size":1,"path":"x","installed_at":"2026-01-01T00:00:00Z"}}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	if code := Run(args("add", "tiamed/collectab"), opt); code != 1 {
 		t.Fatal("expected duplicate to fail", code, err.String())
 	}
+	if !strings.Contains(err.String(), "--force") {
+		t.Fatal(err.String())
+	}
+	_ = os.Remove(statePath)
 	out.Reset()
 	err.Reset()
 	if code := Run(args("remove", "missing"), opt); code != 3 {

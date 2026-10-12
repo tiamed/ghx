@@ -81,10 +81,17 @@ func (a *app) add(args []string) int {
 	if err != nil {
 		return a.fail(err)
 	}
+	st, err := state.Load(filepath.Join(a.dataDir, "state.json"))
+	if err != nil {
+		return a.fail(err)
+	}
 	replaced := false
+	wasNew := true
 	for i := range f.Extensions {
 		if f.Extensions[i].Name == ext.Name {
-			if !*force {
+			wasNew = false
+			_, installed := st.Extensions[ext.Name]
+			if !*force && installed {
 				return a.fail(fmt.Errorf("%s is already tracked (pass --force to replace it)", ext.Name))
 			}
 			f.Extensions[i] = ext
@@ -102,7 +109,31 @@ func (a *app) add(args []string) int {
 		return 0
 	}
 	fmt.Fprintf(a.stderr, "tracking %s (%s)\n", ext.Name, ext.Repo)
-	return a.updateNames([]string{ext.Name}, *dry, false)
+	code := a.updateNames([]string{ext.Name}, *dry, false)
+	if code != 0 && wasNew && !*dry {
+		if rb := a.rollbackAdd(ext.Name); rb != nil {
+			fmt.Fprintf(a.stderr, "ghx: also failed to roll back config: %s\n", a.clean(rb.Error()))
+		}
+	}
+	return code
+}
+
+func (a *app) rollbackAdd(name string) error {
+	f, err := config.Load(a.configPath)
+	if err != nil {
+		return err
+	}
+	var out []config.Extension
+	for _, e := range f.Extensions {
+		if e.Name != name {
+			out = append(out, e)
+		}
+	}
+	if out == nil {
+		out = []config.Extension{}
+	}
+	f.Extensions = out
+	return config.Save(a.configPath, f)
 }
 
 func (a *app) list(args []string) int {
@@ -310,7 +341,11 @@ func (a *app) updateNames(names []string, dry, asJSON bool) int {
 	var codes []int
 	for _, ext := range exts {
 		a.patternName = ext.Name
-		res, err := install.Apply(context.Background(), ext, install.Options{
+		ctx := a.ctx
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		res, err := install.Apply(ctx, ext, install.Options{
 			DataDir: a.dataDir,
 			Client:  a.client(),
 			DryRun:  dry,

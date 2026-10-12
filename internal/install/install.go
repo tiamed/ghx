@@ -9,7 +9,9 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"ghx/internal/archive"
@@ -363,12 +365,18 @@ func lockDir(dir string) (func(), error) {
 		return nil, err
 	}
 	p := filepath.Join(dir, "ghx.lock")
-	f, err := os.OpenFile(p, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
-	if errors.Is(err, os.ErrExist) {
-		st, statErr := os.Stat(p)
-		if statErr == nil && time.Since(st.ModTime()) > 30*time.Minute {
-			_ = os.Remove(p)
-			f, err = os.OpenFile(p, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
+	var f *os.File
+	var err error
+	for attempt := 0; attempt < 3; attempt++ {
+		f, err = os.OpenFile(p, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
+		if err == nil {
+			break
+		}
+		if !errors.Is(err, os.ErrExist) {
+			return nil, err
+		}
+		if !stealStaleLock(p) {
+			return nil, fmt.Errorf("another ghx process holds %s", p)
 		}
 	}
 	if err != nil {
@@ -380,6 +388,41 @@ func lockDir(dir string) (func(), error) {
 	fmt.Fprintf(f, "%d\n", os.Getpid())
 	f.Close()
 	return func() { _ = os.Remove(p) }, nil
+}
+
+// stealStaleLock removes a lock whose owner PID is dead, or one older than 30 minutes.
+func stealStaleLock(path string) bool {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return false
+	}
+	pid, _ := strconv.Atoi(strings.TrimSpace(string(b)))
+	if pid > 0 && !pidAlive(pid) {
+		return os.Remove(path) == nil
+	}
+	st, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+	if time.Since(st.ModTime()) > 30*time.Minute {
+		return os.Remove(path) == nil
+	}
+	return false
+}
+
+func pidAlive(pid int) bool {
+	if pid <= 0 {
+		return false
+	}
+	p, err := os.FindProcess(pid)
+	if err != nil {
+		return false
+	}
+	err = p.Signal(syscall.Signal(0))
+	if err == nil {
+		return true
+	}
+	return windowsProcessExists(uint32(pid))
 }
 
 func writeInstallNote(path, name, unpacked string) error {

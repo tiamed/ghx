@@ -156,3 +156,23 @@ func sha(b []byte) string {
 	sum := sha256.Sum256(b)
 	return hex.EncodeToString(sum[:])
 }
+
+func TestLockDirStalePID(t *testing.T) {
+	dir := t.TempDir()
+	lock := filepath.Join(dir, "ghx.lock")
+	if err := os.WriteFile(lock, []byte("999999\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	unlock, err := lockDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer unlock()
+	b, err := os.ReadFile(lock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(b) == "999999\n" {
+		t.Fatal("stale lock not stolen")
+	}
+}

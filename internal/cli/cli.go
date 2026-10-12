@@ -3,13 +3,16 @@ package cli
 
 import (
 	"bufio"
+	"context"
 	"flag"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"os/signal"
 	"runtime"
 	"strings"
+	"syscall"
 
 	"ghx/internal/config"
 	"ghx/internal/gh"
@@ -34,6 +37,8 @@ type Options struct {
 
 // Run executes ghx and returns a process exit code.
 func Run(args []string, opt Options) int {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 	if opt.Stdin == nil {
 		opt.Stdin = os.Stdin
 	}
@@ -78,7 +83,7 @@ func Run(args []string, opt Options) int {
 	}
 	tok, src := tokenFrom(opt.Getenv)
 	a := &app{
-		opt: opt, stdin: opt.Stdin, stdout: opt.Stdout, stderr: opt.Stderr,
+		ctx: ctx, opt: opt, stdin: opt.Stdin, stdout: opt.Stdout, stderr: opt.Stderr,
 		configPath: globals.config, dataDir: globals.data, verbose: globals.verbose,
 		token: tok, tokenSrc: src, goos: opt.GOOS,
 	}
@@ -166,6 +171,7 @@ func tokenFrom(getenv func(string) string) (string, string) {
 }
 
 type app struct {
+	ctx         context.Context
 	opt         Options
 	stdin       io.Reader
 	stdout      io.Writer
