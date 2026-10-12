@@ -20,10 +20,11 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
+          cache: false
       - name: Test
         run: go test -race ./...
       - name: Help
@@ -45,10 +46,11 @@ jobs:
             goarch: amd64
             out: ghx-windows-amd64.exe
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
+          cache: false
       - name: Build ${{ matrix.out }}
         env:
           CGO_ENABLED: "0"
@@ -60,9 +62,9 @@ jobs:
           go build -trimpath -ldflags "-s -w -X ghx/internal/version.Version=${version}" \
             -o "dist/${{ matrix.out }}" ./cmd/ghx
           test -s "dist/${{ matrix.out }}"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
-          name: ${{ matrix.out }}
           path: dist/${{ matrix.out }}
           if-no-files-found: error
           retention-days: 90
+          archive: false
