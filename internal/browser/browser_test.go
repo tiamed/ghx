@@ -22,6 +22,12 @@ func TestDetectLinuxAndWindows(t *testing.T) {
 	if len(found) != 2 {
 		t.Fatalf("%+v", found)
 	}
+	// A second chrome path must not show up as another browser.
+	env.Exists = func(p string) bool { return p == "/opt/google/chrome/chrome" }
+	found = Detect(env)
+	if len(found) != 2 {
+		t.Fatalf("expected chrome collapsed to one entry, got %+v", found)
+	}
 	if found[0].Name != "chrome" || found[0].Load != "no" {
 		t.Fatalf("chrome %+v", found[0])
 	}

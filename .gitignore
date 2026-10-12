@@ -1,4 +1,5 @@
 /dist/
+/agent-tools/
 /bin/
 *.exe
 *.test

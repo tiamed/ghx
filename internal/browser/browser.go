@@ -44,13 +44,13 @@ func Detect(env Env) []Browser {
 			return err == nil
 		}
 	}
-	seen := map[string]bool{}
+	seenPath := map[string]bool{}
 	var out []Browser
 	add := func(b Browser) {
-		if b.Path == "" || seen[b.Path] {
+		if b.Path == "" || seenPath[b.Path] {
 			return
 		}
-		seen[b.Path] = true
+		seenPath[b.Path] = true
 		out = append(out, b)
 	}
 	for _, spec := range specs(env) {
@@ -65,6 +65,21 @@ func Detect(env Env) []Browser {
 				add(classify(env, spec.kind, p))
 			}
 		}
+	}
+	return dedupeNames(out)
+}
+
+// dedupeNames keeps the first binary of each browser family. Chrome is often
+// installed as several symlinks and a wrapper that all resolve to one product.
+func dedupeNames(in []Browser) []Browser {
+	seen := map[string]bool{}
+	var out []Browser
+	for _, b := range in {
+		if seen[b.Name] {
+			continue
+		}
+		seen[b.Name] = true
+		out = append(out, b)
 	}
 	return out
 }
