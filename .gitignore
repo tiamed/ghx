@@ -1,0 +1,8 @@
+/dist/
+/bin/
+*.exe
+*.test
+coverage.out
+.env
+*.partial
+.DS_Store

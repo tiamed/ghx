@@ -1,0 +1,16 @@
+{
+  "extensions": [
+    {
+      "name": "collectab",
+      "repo": "tiamed/collectab",
+      "channel": "stable",
+      "asset_pattern": "chrome\\.zip$"
+    },
+    {
+      "name": "danmaku-anywhere",
+      "repo": "Mr-Quin/danmaku-anywhere",
+      "channel": "nightly",
+      "asset_pattern": "chrome\\.zip$"
+    }
+  ]
+}
