@@ -7,13 +7,13 @@ Install and update Chrome extensions from GitHub Releases when they are **not** 
 PowerShell (no token, no `gh`):
 
 ```powershell
-$dir=Join-Path $env:LOCALAPPDATA 'ghx\bin'; New-Item -ItemType Directory -Force $dir|Out-Null; $exe=Join-Path $dir 'ghx.exe'; Invoke-WebRequest -Uri 'https://github.com/tiamed/ghx/releases/download/v0.1.0/ghx-windows-amd64.exe' -OutFile $exe; $u=[Environment]::GetEnvironmentVariable('Path','User'); if(($u -split ';' | Where-Object { $_ -and $_.TrimEnd('\') -ieq $dir.TrimEnd('\') }).Count -eq 0){ [Environment]::SetEnvironmentVariable('Path', ($u.TrimEnd(';')+';'+$dir), 'User') }; $env:Path="$dir;$env:Path"; ghx --help
+$dir=Join-Path $env:LOCALAPPDATA 'ghx\bin'; New-Item -ItemType Directory -Force $dir|Out-Null; $exe=Join-Path $dir 'ghx.exe'; Invoke-WebRequest -Uri 'https://github.com/tiamed/ghx/releases/download/v0.1.1/ghx-windows-amd64.exe' -OutFile $exe; $u=[Environment]::GetEnvironmentVariable('Path','User'); if(($u -split ';' | Where-Object { $_ -and $_.TrimEnd('\') -ieq $dir.TrimEnd('\') }).Count -eq 0){ [Environment]::SetEnvironmentVariable('Path', ($u.TrimEnd(';')+';'+$dir), 'User') }; $env:Path="$dir;$env:Path"; ghx --help
 ```
 
 ### Linux
 
 ```bash
-curl -fsSL -o ghx https://github.com/tiamed/ghx/releases/download/v0.1.0/ghx-linux-amd64
+curl -fsSL -o ghx https://github.com/tiamed/ghx/releases/download/v0.1.1/ghx-linux-amd64
 chmod +x ghx && sudo install -m 755 ghx /usr/local/bin/ghx
 # arm64: use ghx-linux-arm64 instead
 ```
