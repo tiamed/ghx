@@ -1,0 +1,70 @@
+name: ci
+
+# Tests and cross-compiled binaries for pull requests and pushes to main.
+# The three artifacts match `make build-all`. Tagged releases are published
+# by release.yml.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Test
+        run: go test -race ./...
+      - name: Help
+        run: go run ./cmd/ghx --help
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            out: ghx-linux-amd64
+          - goos: linux
+            goarch: arm64
+            out: ghx-linux-arm64
+          - goos: windows
+            goarch: amd64
+            out: ghx-windows-amd64.exe
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Build ${{ matrix.out }}
+        env:
+          CGO_ENABLED: "0"
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          mkdir -p dist
+          version="${GITHUB_SHA::12}"
+          go build -trimpath -ldflags "-s -w -X ghx/internal/version.Version=${version}" \
+            -o "dist/${{ matrix.out }}" ./cmd/ghx
+          test -s "dist/${{ matrix.out }}"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.out }}
+          path: dist/${{ matrix.out }}
+          if-no-files-found: error
+          retention-days: 90

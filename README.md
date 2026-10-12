@@ -22,12 +22,40 @@ make build-all
 | `dist/ghx-linux-arm64` | Linux arm64 |
 | `dist/ghx-windows-amd64.exe` | Windows 64 位 |
 
-CI（`.github/workflows/ci.yml`）在 Linux 上跑测试，并上传上面三个二进制。Windows 二进制是在 Linux 上交叉编译的，CI 不会启动 Windows 跑测试。
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) 在 pull request 和推送到 `main` 时跑测试，并上传上面三个二进制作为 workflow artifact。Windows 二进制是在 Linux 上交叉编译的，CI 不会启动 Windows 跑测试。
 
-Linux 放到 PATH：
+推送 `v*` 标签时，[`.github/workflows/release.yml`](.github/workflows/release.yml) 会用同一套 `make build-all` 再编一次，把三个二进制和 `SHA256SUMS` 挂到该标签的 GitHub Release，并同时保留为 workflow artifact。
+
+### 下载预编译文件
+
+不必在本机安装 Go。文件名和上表相同，只是不在 `dist/` 里。
+
+**GitHub Release（推荐，长期可下载）。** 打开本仓库的 [Releases](https://github.com/tiamed/ghx/releases)，下载对应系统的文件，并用同一次发布里的 `SHA256SUMS` 核对：
 
 ```bash
-install -m 755 dist/ghx-linux-amd64 ~/.local/bin/ghx
+gh release download <tag> --repo tiamed/ghx --pattern 'ghx-*' --pattern SHA256SUMS
+sha256sum -c SHA256SUMS
+```
+
+把 `<tag>` 换成实际标签，例如 `v0.1.0`。Windows 上可以用 `Get-FileHash .\ghx-windows-amd64.exe -Algorithm SHA256`，对照 `SHA256SUMS` 里的同一行。
+
+**Actions artifact（`main` 和 pull request，约保留 90 天）。** 还没有打标签、或想拿某次 PR 的构建时：
+
+1. 打开 [ci 工作流](https://github.com/tiamed/ghx/actions/workflows/ci.yml)，点进一次成功的运行。
+2. 在页面底部的 Artifacts 里下载 `ghx-linux-amd64`、`ghx-linux-arm64` 或 `ghx-windows-amd64.exe`。
+
+```bash
+# RUN_ID 是 Actions 运行页面 URL 里的数字。gh 会把 zip 解开。
+gh run download RUN_ID --repo tiamed/ghx --name ghx-linux-amd64
+```
+
+从 Actions 页面下载的 artifact 是 zip，里面才是二进制。GitHub Release 上的文件是未压缩的二进制。标签构建的四个文件打在一个名为 `ghx-<tag>` 的 zip artifact 里，运行记录在 [release 工作流](https://github.com/tiamed/ghx/actions/workflows/release.yml)。
+
+Linux 放到 PATH（下载的文件先 `chmod +x`）：
+
+```bash
+install -m 755 dist/ghx-linux-amd64 ~/.local/bin/ghx   # 源码构建
+# install -m 755 ghx-linux-amd64 ~/.local/bin/ghx      # Release 或已解开的 artifact
 ```
 
 Windows（PowerShell），把 exe 放到某个 PATH 目录后：
@@ -59,43 +87,45 @@ export GITHUB_TOKEN=ghp_...    # 或 GH_TOKEN，GITHUB_TOKEN 优先
 
 可以用 `--config`、`--data`，或环境变量 `GHX_CONFIG`、`GHX_DATA_DIR` 覆盖。
 
-### collectab
+下面的仓库名是占位符，不是真实项目。换成你自己的 `owner/name` 即可。
 
-[tiamed/collectab](https://github.com/tiamed/collectab/releases) 的正式 Release 带一个 `collectab-<version>-chrome.zip`（当前为 `v0.2.18`）。默认通道就是 stable。
+### 稳定版：my-extension
+
+假设 `owner/my-extension` 的正式 Release 带一个 `my-extension-<version>-chrome.zip`。默认通道就是 stable。
 
 ```bash
-ghx add https://github.com/tiamed/collectab/releases
+ghx add https://github.com/owner/my-extension/releases
 ghx list
-ghx update collectab          # 同一 digest 时什么都不做
-ghx path collectab
+ghx update my-extension          # 同一 digest 时什么都不做
+ghx path my-extension
 ```
 
 `add` 会下载并解压。只想先记下仓库时加 `--track-only`。
 
-### danmaku-anywhere
+### 多通道：nightly-extension
 
-[Mr-Quin/danmaku-anywhere](https://github.com/Mr-Quin/danmaku-anywhere/releases) 同时有三类 Release：
+假设 `owner/nightly-extension` 同时有三类 Release：
 
-| 通道 | 实际标签 | 附件 |
+| 通道 | 标签 | 附件 |
 | --- | --- | --- |
-| `stable`（默认） | `v1.5.0`，这是 GitHub 的 latest 非预发布 | `danmaku-anywhere-1.5.0-chrome.zip` 和 `.crx`，另有 firefox zip |
-| `nightly` | `nightly-<run id>`，预发布 | `danmaku-anywhere-<version>-chrome.zip` / `.crx` / `firefox.zip` |
+| `stable`（默认） | `v1.2.0`，这是 GitHub 的 latest 非预发布 | `nightly-extension-1.2.0-chrome.zip` 和 `.crx`，另有 firefox zip |
+| `nightly` | `nightly-<run id>`，预发布 | `nightly-extension-<version>-chrome.zip` / `.crx` / `firefox.zip` |
 | `preview` | `preview-pr-<number>`，预发布 | 同上 |
-| `prerelease` | 上面两类里**发布时间最新**的一个 | 目前经常是某次 PR 的 preview，不是 nightly |
+| `prerelease` | 上面两类里**发布时间最新**的一个 | 经常是某次 PR 的 preview，不是 nightly |
 
 标题几乎都叫 “Preview Build …”。工具只根据 **tag** 判断 preview，避免把 nightly 的标题误当成 preview。
 
 只要稳定版：
 
 ```bash
-ghx add Mr-Quin/danmaku-anywhere
+ghx add owner/nightly-extension
 ```
 
 要每晚构建：
 
 ```bash
-ghx add https://github.com/Mr-Quin/danmaku-anywhere/releases \
-  --name danmaku-anywhere \
+ghx add https://github.com/owner/nightly-extension/releases \
+  --name nightly-extension \
   --channel nightly \
   --asset 'chrome\.zip$'
 ```
@@ -103,7 +133,7 @@ ghx add https://github.com/Mr-Quin/danmaku-anywhere/releases \
 先看会选中哪个文件：
 
 ```bash
-ghx update danmaku-anywhere --dry-run -v
+ghx update nightly-extension --dry-run -v
 ```
 
 `-v` 会把每个附件的得分打到 stderr。firefox 包在自动选择时直接排除。
@@ -114,14 +144,14 @@ ghx update danmaku-anywhere --dry-run -v
 {
   "extensions": [
     {
-      "name": "collectab",
-      "repo": "tiamed/collectab",
+      "name": "my-extension",
+      "repo": "owner/my-extension",
       "channel": "stable",
       "asset_pattern": "chrome\\.zip$"
     },
     {
-      "name": "danmaku-anywhere",
-      "repo": "Mr-Quin/danmaku-anywhere",
+      "name": "nightly-extension",
+      "repo": "owner/nightly-extension",
       "channel": "nightly",
       "asset_pattern": "chrome\\.zip$"
     }
@@ -180,13 +210,13 @@ ghx doctor           路径、令牌是否设置、找到的浏览器
 - 像源码包或带 `linux` / `windows` / `amd64` 这类系统名的减分
 - 自动模式下，文件名含 firefox、gecko、safari、android 的直接排除
 
-所以 danmaku 的 `*-chrome.zip` 会赢过 `*-chrome.crx` 和 `*-firefox.zip`。只有 crx 时就用 crx，工具会剥掉 CRX 头再解压。显式写出 `firefox\.zip$` 时不再排除 Firefox 包。
+所以 `*-chrome.zip` 会赢过 `*-chrome.crx` 和 `*-firefox.zip`。只有 crx 时就用 crx，工具会剥掉 CRX 头再解压。显式写出 `firefox\.zip$` 时不再排除 Firefox 包。
 
 终端里遇到平分，选择会被收成一条还能匹配后续版本号的正则（数字换成 `\d+`）写回 `asset_pattern`。
 
 ## 校验和幂等
 
-每个附件如果带有 GitHub 的 `digest`（这两个示例仓库现在都有 `sha256:`），下载后重新计算，不一致就删除临时文件，**不会**替换已经装好的目录（退出码 4）。字节数必须和 API 里的 `size` 一致。
+每个附件如果带有 GitHub 的 `digest`（常见写法是 `sha256:`），下载后重新计算，不一致就删除临时文件，**不会**替换已经装好的目录（退出码 4）。字节数必须和 API 里的 `size` 一致。
 
 同目录如果还有 `SHA256SUMS`、`*.sha256` 这类小文件，也会对照。没有 digest 时，至少比对大小；若响应带了 `ETag`，下次会发 `If-None-Match`。
 
@@ -218,12 +248,12 @@ ghx **不会**改 Secure Preferences，也**不会**伪造企业策略。下面�
 
 Edge 和 Brave 是否还认 `--load-extension` 不一定，工具会标成 unknown。
 
-Linux 上如果发布物里有 `.crx`（danmaku-anywhere 有，collectab 目前只有 zip）：
+Linux 上如果发布物里有 `.crx`（有的仓库和 zip 一起发，有的只有 zip）：
 
 ```bash
-ghx policy danmaku-anywhere --fetch
+ghx policy my-extension --fetch
 sudo 按命令输出，把 JSON 写到系统目录   # 或：
-ghx policy danmaku-anywhere --fetch --install-external
+ghx policy my-extension --fetch --install-external
 ```
 
 `--install-external` 写的是文档里的外部 CRX 偏好，不是企业强制安装。写不进去时会打印需要手动执行的命令，而不是假装已经装进浏览器。装好后要完全退出 Chrome 再打开。若你的 Chrome 忽略这个 JSON（例如策略把扩展安装封死了），退回「加载已解压的扩展程序」。
@@ -256,7 +286,7 @@ go test -race ./...
 make build-all
 ```
 
-测试不访问网络。选择逻辑用的是这两个仓库当前的真实文件名：`collectab-0.2.18-chrome.zip`，以及 danmaku 的 `*-chrome.zip` / `*-chrome.crx` / `*-firefox.zip`。
+测试不访问网络。选择逻辑的夹具使用这类文件名：`<name>-<version>-chrome.zip`，以及同一次 Release 里的 `*-chrome.crx` 和 `*-firefox.zip`。
 
 许可证：MIT。
 
@@ -281,12 +311,40 @@ make build-all
 | `dist/ghx-linux-arm64` | Linux arm64 |
 | `dist/ghx-windows-amd64.exe` | 64-bit Windows |
 
-CI (`.github/workflows/ci.yml`) runs the tests on Linux and uploads those three binaries. The Windows binary is cross-compiled; CI does not boot Windows.
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs the tests on pull requests and pushes to `main`, and uploads those three binaries as workflow artifacts. The Windows binary is cross-compiled; CI does not boot Windows.
 
-Linux:
+Pushing a `v*` tag runs [`.github/workflows/release.yml`](.github/workflows/release.yml). That workflow builds the same three files with `make build-all`, attaches them and `SHA256SUMS` to the GitHub Release for the tag, and also keeps them as a workflow artifact.
+
+### Download a prebuilt binary
+
+You do not need Go installed. The file names match the table above; they are not under `dist/`.
+
+**GitHub Release (preferred; kept with the tag).** Open this repository's [Releases](https://github.com/tiamed/ghx/releases), download the file for your system, and check it against `SHA256SUMS` from the same release:
 
 ```bash
-install -m 755 dist/ghx-linux-amd64 ~/.local/bin/ghx
+gh release download <tag> --repo tiamed/ghx --pattern 'ghx-*' --pattern SHA256SUMS
+sha256sum -c SHA256SUMS
+```
+
+Replace `<tag>` with the release you want, for example `v0.1.0`. On Windows, `Get-FileHash .\ghx-windows-amd64.exe -Algorithm SHA256` should match the line in `SHA256SUMS`.
+
+**Actions artifacts (main and pull requests, kept for about 90 days).** Use these when there is no tag yet, or when you want the binaries from a specific pull request:
+
+1. Open the [ci workflow](https://github.com/tiamed/ghx/actions/workflows/ci.yml) and select a successful run.
+2. Download `ghx-linux-amd64`, `ghx-linux-arm64`, or `ghx-windows-amd64.exe` from Artifacts at the bottom of the run page.
+
+```bash
+# RUN_ID is the number in the Actions run URL. gh extracts the zip.
+gh run download RUN_ID --repo tiamed/ghx --name ghx-linux-amd64
+```
+
+An artifact downloaded from the Actions page is a zip that contains the binary. Files on a GitHub Release are the uncompressed binaries. A tag build packs all four files into one zip artifact named `ghx-<tag>`. Those runs are listed on the [release workflow](https://github.com/tiamed/ghx/actions/workflows/release.yml).
+
+Linux (`chmod +x` the downloaded file first):
+
+```bash
+install -m 755 dist/ghx-linux-amd64 ~/.local/bin/ghx   # built from source
+# install -m 755 ghx-linux-amd64 ~/.local/bin/ghx      # a Release or an extracted artifact
 ```
 
 Windows (PowerShell), after the exe is on `PATH`:
@@ -316,43 +374,45 @@ On GitHub Actions the default `GITHUB_TOKEN` often cannot read other repositorie
 
 Override with `--config`, `--data`, `GHX_CONFIG`, or `GHX_DATA_DIR`.
 
-### collectab
+The repository names below are placeholders, not real projects. Substitute your own `owner/name`.
 
-[tiamed/collectab](https://github.com/tiamed/collectab/releases) publishes a stable `collectab-<version>-chrome.zip` (currently `v0.2.18`). The default channel is stable.
+### Stable: my-extension
+
+Suppose `owner/my-extension` publishes a stable `my-extension-<version>-chrome.zip`. The default channel is stable.
 
 ```bash
-ghx add https://github.com/tiamed/collectab/releases
+ghx add https://github.com/owner/my-extension/releases
 ghx list
-ghx update collectab          # no-op when the digest is unchanged
-ghx path collectab
+ghx update my-extension          # no-op when the digest is unchanged
+ghx path my-extension
 ```
 
 `add` downloads and unpacks. Pass `--track-only` to record the repo without downloading.
 
-### danmaku-anywhere
+### Several channels: nightly-extension
 
-[Mr-Quin/danmaku-anywhere](https://github.com/Mr-Quin/danmaku-anywhere/releases) publishes three kinds of release:
+Suppose `owner/nightly-extension` publishes three kinds of release:
 
 | Channel | Tags | Assets |
 | --- | --- | --- |
-| `stable` (default) | `v1.5.0`, which is what GitHub returns as the latest non-prerelease | `danmaku-anywhere-1.5.0-chrome.zip`, `.crx`, and a firefox zip |
-| `nightly` | `nightly-<run id>`, prerelease | `danmaku-anywhere-<version>-chrome.zip`, `.crx`, and `firefox.zip` |
+| `stable` (default) | `v1.2.0`, which is what GitHub returns as the latest non-prerelease | `nightly-extension-1.2.0-chrome.zip`, `.crx`, and a firefox zip |
+| `nightly` | `nightly-<run id>`, prerelease | `nightly-extension-<version>-chrome.zip`, `.crx`, and `firefox.zip` |
 | `preview` | `preview-pr-<number>`, prerelease | same shape |
 | `prerelease` | whichever of the above was **published last** | often a pull-request preview, not the nightly |
 
-Release titles are almost all “Preview Build …”. Preview matching looks at the **tag only**, so a nightly titled “Preview Build nightly-…” is not treated as a preview.
+Release titles may all be “Preview Build …”. Preview matching looks at the **tag only**, so a nightly titled “Preview Build nightly-…” is not treated as a preview.
 
 Stable:
 
 ```bash
-ghx add Mr-Quin/danmaku-anywhere
+ghx add owner/nightly-extension
 ```
 
 Nightly:
 
 ```bash
-ghx add https://github.com/Mr-Quin/danmaku-anywhere/releases \
-  --name danmaku-anywhere \
+ghx add https://github.com/owner/nightly-extension/releases \
+  --name nightly-extension \
   --channel nightly \
   --asset 'chrome\.zip$'
 ```
@@ -360,7 +420,7 @@ ghx add https://github.com/Mr-Quin/danmaku-anywhere/releases \
 See the choice before downloading:
 
 ```bash
-ghx update danmaku-anywhere --dry-run -v
+ghx update nightly-extension --dry-run -v
 ```
 
 `-v` prints each asset score on stderr. Firefox packages are excluded unless you opt in with `--asset`.
@@ -371,14 +431,14 @@ Both entries live in [`examples/config.json`](examples/config.json):
 {
   "extensions": [
     {
-      "name": "collectab",
-      "repo": "tiamed/collectab",
+      "name": "my-extension",
+      "repo": "owner/my-extension",
       "channel": "stable",
       "asset_pattern": "chrome\\.zip$"
     },
     {
-      "name": "danmaku-anywhere",
-      "repo": "Mr-Quin/danmaku-anywhere",
+      "name": "nightly-extension",
+      "repo": "owner/nightly-extension",
       "channel": "nightly",
       "asset_pattern": "chrome\\.zip$"
     }
@@ -437,13 +497,13 @@ Without `--asset`, higher score wins. A tie is an error (or a prompt on a termin
 - source-like names, and OS/arch tokens such as `linux`, `windows`, `amd64`, are penalized
 - in automatic mode, firefox, gecko, safari, and android names are dropped
 
-That selects danmaku’s `*-chrome.zip` over `*-chrome.crx` and `*-firefox.zip`. A crx-only release is unpacked by stripping the CRX header. An explicit `firefox\.zip$` pattern opts into the Firefox package.
+That selects `*-chrome.zip` over `*-chrome.crx` and `*-firefox.zip`. A crx-only release is unpacked by stripping the CRX header. An explicit `firefox\.zip$` pattern opts into the Firefox package.
 
 On a terminal, the file you pick is saved as an `asset_pattern` with version numbers rewritten to `\d+`, so the next release still matches.
 
 ## Verification and idempotency
 
-When GitHub sends a `digest` (both sample repos currently send `sha256:`), the download is hashed and rejected on mismatch. The previous unpacked directory is left in place (exit 4). The byte count must match the API `size`.
+When GitHub sends a `digest` (often `sha256:`), the download is hashed and rejected on mismatch. The previous unpacked directory is left in place (exit 4). The byte count must match the API `size`.
 
 A sibling `SHA256SUMS` or `*.sha256` asset is checked too. With no digest, size is still checked, and an `ETag` is reused via `If-None-Match` on the next run.
 
@@ -475,12 +535,12 @@ Open `chrome://extensions`, turn on Developer mode, and load that folder **once*
 
 Edge and Brave may or may not still honor `--load-extension`; they are reported as unknown.
 
-On Linux, when the release includes a `.crx` (danmaku-anywhere does; collectab currently ships only a zip):
+On Linux, when the release includes a `.crx` (some repos ship one next to the zip; others ship only a zip):
 
 ```bash
-ghx policy danmaku-anywhere --fetch
+ghx policy my-extension --fetch
 # or, if this user can write the system directory:
-ghx policy danmaku-anywhere --fetch --install-external
+ghx policy my-extension --fetch --install-external
 ```
 
 `--install-external` writes the documented external-CRX preferences file. It is not an enterprise force-install. If the directory is not writable, ghx prints the file and the commands to run; it does not claim the browser installed the extension. Quit Chrome completely and start it again. If that Chrome build ignores the JSON (for example because an install blocklist is set), use Load unpacked.
@@ -513,6 +573,6 @@ go test -race ./...
 make build-all
 ```
 
-Tests do not touch the network. Asset fixtures use the real names from these repositories: `collectab-0.2.18-chrome.zip`, and danmaku’s `*-chrome.zip` / `*-chrome.crx` / `*-firefox.zip`.
+Tests do not touch the network. Asset fixtures use names shaped like `<name>-<version>-chrome.zip`, plus `*-chrome.crx` and `*-firefox.zip` from the same release.
 
 License: MIT.
