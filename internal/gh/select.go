@@ -23,7 +23,7 @@ var (
 
 // Allows reports whether rel is a candidate for q.
 //
-// Preview matching uses the tag only. danmaku-anywhere titles every nightly
+// Preview matching uses the tag only. Some projects title every nightly
 // "Preview Build nightly-…", so a name search for "preview" would swallow nightlies.
 func Allows(rel Release, q Query) bool {
 	if rel.Draft {

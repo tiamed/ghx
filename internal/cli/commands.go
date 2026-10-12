@@ -133,8 +133,8 @@ func (a *app) list(args []string) int {
 	if len(f.Extensions) == 0 && !*asJSON {
 		fmt.Fprint(a.stdout, `No extensions are tracked.
 Add one:
-  ghx add https://github.com/tiamed/collectab/releases
-  ghx add https://github.com/Mr-Quin/danmaku-anywhere/releases --channel nightly
+  ghx add https://github.com/owner/my-extension/releases
+  ghx add https://github.com/owner/nightly-extension/releases --channel nightly
 `)
 		return 0
 	}

@@ -24,10 +24,10 @@ Global flags:
       --data PATH     Data directory (default: OS data dir/ghx)
 
 Examples:
-  ghx add https://github.com/tiamed/collectab/releases
-  ghx add https://github.com/Mr-Quin/danmaku-anywhere/releases --channel nightly
+  ghx add https://github.com/owner/my-extension/releases
+  ghx add https://github.com/owner/nightly-extension/releases --channel nightly
   ghx update
-  ghx update danmaku-anywhere --dry-run
+  ghx update nightly-extension --dry-run
 
 Exit codes:
   0  success, or already up to date
@@ -61,12 +61,12 @@ Flags:
   --dry-run           Resolve the asset and do not download
   --force             Replace an existing config entry
 
-danmaku-anywhere publishes nightlies and PR previews as pre-releases, plus an
-older stable v1.5.0. The default channel is stable. Use --channel nightly for
-nightly-* tags. --channel prerelease follows the newest published release,
-which is often a preview-pr-* build.
+Some projects publish nightlies and pull-request previews as pre-releases,
+plus an older stable tag such as v1.2.0. The default channel is stable. Use
+--channel nightly for nightly-* tags. --channel prerelease follows the newest
+published release, which is often a preview-pr-* build.
 
-collectab publishes stable *-chrome.zip assets. The default channel is enough.
+A project that only publishes stable *-chrome.zip assets needs no channel flag.
 `
 	case "list":
 		return "Usage: ghx list [--json]\n\nList tracked extensions from the local config. This does not contact GitHub.\n"
@@ -94,7 +94,7 @@ That flag is an unsupported community workaround and may stop working.
 Print what this operating system actually allows. With a name, also print the
 unpacked path and, when a CRX id is known, the Linux external_crx JSON.
 
---fetch downloads the .crx asset (danmaku-anywhere publishes one next to the zip).
+--fetch downloads the .crx asset when the release publishes one next to the zip.
 --install-external writes <id>.json under the system Chrome/Chromium extensions
 directory. It needs permission to write there. Windows cannot use this method.
 `
